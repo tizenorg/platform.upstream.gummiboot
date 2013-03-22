@@ -1,0 +1,143 @@
+#
+#  This file is part of gummiboot
+#
+#  Copyright (C) 2013 Karel Zak <kzak@redhat.com>
+#
+#  gummiboot is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+#
+#  gummiboot is distributed in the hope that it will be useful, but
+#  WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+#  Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with systemd; If not, see <http://www.gnu.org/licenses/>.
+
+ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+AM_MAKEFLAGS = --no-print-directory
+
+gummibootlibdir = $(prefix)/lib/gummiboot
+
+AM_CPPFLAGS = -include config.h
+AM_CFLAGS = \
+	-Wall \
+	-Wextra \
+	-Wmissing-prototypes
+AM_LDFLAGS =
+
+EXTRA_DIST = autogen.sh README LICENSE
+CLEANFILES =
+
+# ------------------------------------------------------------------------------
+bin_PROGRAMS = gummiboot
+
+gummiboot_SOURCES = \
+	src/setup/setup.c \
+	src/setup/efivars.c \
+	src/setup/efivars.h
+
+gummiboot_CFLAGS = \
+	$(AM_CFLAGS) \
+	-Wno-unused-parameter -D_GNU_SOURCE \
+	-DMACHINE_TYPE_NAME=\"$(MACHINE_TYPE_NAME)\" \
+	-DGUMMIBOOTLIBDIR=\"$(gummibootlibdir)\" \
+	$(BLKID_CFLAGS)
+
+gummiboot_LDADD = \
+	$(BLKID_LIBS)
+
+if ENABLE_MANPAGES
+%.8: %.xml
+	$(AM_V_GEN)$(XSLTPROC) -o $@ --nonet \
+	  --stringparam man.output.quietly 1 \
+	  --stringparam man.th.extra1.suppress 1 \
+	  --stringparam man.authors.section.enabled 0 \
+	  --stringparam man.copyright.section.enabled 0 \
+	  http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl $<
+
+dist_man_MANS = man/gummiboot.8
+endif
+
+EXTRA_DIST += man/gummiboot.xml
+CLEANFILES += man/gummiboot.8
+
+# ------------------------------------------------------------------------------
+# EFI compilation -- this part of the build system uses custom make rules and
+# bypasses regular automake to provide absolute control on compiler and linker
+# flags.
+efi_loadername = gummiboot$(MACHINE_TYPE_NAME).efi
+efi_sources = src/efi/gummiboot.c
+
+efi_cppflags = \
+	-I$(top_builddir) -include config.h \
+	-I/usr/include/efi \
+	-I/usr/include/efi/$(ARCH)
+
+efi_cflags = \
+	-Wall \
+	-Wextra \
+	-nostdinc \
+	-ggdb -O0 \
+	-fpic \
+	-fshort-wchar \
+	-nostdinc \
+	-ffreestanding \
+	-fno-strict-aliasing \
+	-fno-stack-protector \
+	-Wsign-compare
+
+if ARCH_X86_64
+efi_cflags += \
+	-DEFI_FUNCTION_WRAPPER \
+	-mno-red-zone
+endif
+
+efi_ldflags = \
+	-T $(GNUEFI_LDS_DIR)/elf_$(ARCH)_efi.lds \
+	-shared \
+	-Bsymbolic \
+	-nostdlib \
+	-znocombreloc \
+	$(GNUEFI_LIBS) \
+	$(GNUEFI_LDS_DIR)/crt0-efi-$(ARCH).o
+
+efi_objects = $(addprefix $(top_builddir)/,$(efi_sources:.c=.o))
+efi_solib = $(top_builddir)/src/efi/gummiboot.so
+
+# ------------------------------------------------------------------------------
+gummibootlib_DATA = $(efi_loadername)
+CLEANFILES += $(efi_objects) $(efi_solib) $(efi_loadername)
+EXTRA_DIST += $(efi_sources)
+
+$(top_builddir)/src/efi/%.o: $(top_srcdir)/src/efi/%.c
+	@$(MKDIR_P) $(top_builddir)/src/efi/
+	$(AM_V_CC)$(GNUEFI_CC) $(efi_cppflags) $(efi_cflags) -c $< -o $@
+
+$(efi_solib): $(efi_objects)
+	$(AM_V_CCLD)$(LD) $(efi_ldflags) $(efi_objects) \
+		-o $@ -lefi -lgnuefi $(shell $(CC) -print-libgcc-file-name); \
+	nm -D -u $@ | grep ' U ' && exit 1 || :
+.DELETE_ON_ERROR: $(efi_solib)
+
+$(efi_loadername): $(efi_solib)
+	$(AM_V_GEN) objcopy -j .text -j .sdata -j .data -j .dynamic \
+	  -j .dynsym -j .rel -j .rela -j .reloc -j .eh_frame \
+	  --target=efi-app-$(ARCH) $< $@
+
+# ------------------------------------------------------------------------------
+CLEANFILES += test-disk
+EXTRA_DIST += test/test-create-disk.sh
+
+test-disk: gummiboot$(MACHINE_TYPE_NAME).efi test/test-create-disk.sh
+	$(AM_V_GEN)test/test-create-disk.sh
+
+qemu: test-disk
+	$(QEMU_KVM) -m 256 -L $(BIOS) -snapshot test-disk
+
+install-tree: all
+	rm -rf $(abs_srcdir)/install-tree
+	$(MAKE) install DESTDIR=$(abs_srcdir)/install-tree
+	tree $(abs_srcdir)/install-tree
