@@ -77,7 +77,7 @@ AC_CHECK_FILES([/usr/include/efi/efi.h
                 /usr/include/efi/${ARCH}/efibind.h], [],
         [AC_MSG_ERROR([*** GNU Efi headers not found])])
 
-efiroot=$(echo $(cd /usr/lib/$(gcc -print-multi-os-directory); pwd))
+efiroot=/usr/lib
 GNUEFI_LIBS="-L $efiroot"
 
 dnl extra objects and linker scripts
