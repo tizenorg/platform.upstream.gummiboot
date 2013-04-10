@@ -9,7 +9,6 @@ Source0:        http://cgit.freedesktop.org/%{name}/snapshot/%{name}-%{version}.
 Source1001:     packaging/gummiboot.manifest
 BuildRequires:  gnu-efi
 BuildRequires:  pkgconfig(blkid)
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 
 %description
@@ -31,4 +30,8 @@ rm -fr %{buildroot}
 %defattr(-,root,root)
 %manifest gummiboot.manifest
 %{_bindir}/gummiboot
+%ifarch x86_64
 %{_prefix}/lib/gummiboot/gummibootx64.efi
+%else
+%{_prefix}/lib/gummiboot/gummibootia32.efi
+%endif
