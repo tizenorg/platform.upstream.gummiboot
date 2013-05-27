@@ -9,6 +9,7 @@ Source0:        http://cgit.freedesktop.org/%{name}/snapshot/%{name}-%{version}.
 Source1001:     packaging/gummiboot.manifest
 BuildRequires:  gnu-efi
 BuildRequires:  pkgconfig(blkid)
+ExclusiveArch:  %ix86 x86_64
 
 
 %description
