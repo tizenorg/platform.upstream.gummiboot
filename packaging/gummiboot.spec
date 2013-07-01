@@ -6,7 +6,7 @@ Summary:        EFI Kernel loader
 Url:            http://cgit.freedesktop.org/gummiboot/
 Group:          System/Boot
 Source0:        http://cgit.freedesktop.org/%{name}/snapshot/%{name}-%{version}.tar.gz
-Source1001:     packaging/gummiboot.manifest
+Source1001:     gummiboot.manifest
 BuildRequires:  gnu-efi
 BuildRequires:  pkgconfig(blkid)
 ExclusiveArch:  %ix86 x86_64
@@ -28,6 +28,7 @@ rm -fr %{buildroot}
 %make_install
 
 %files
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %manifest gummiboot.manifest
 %{_bindir}/gummiboot
