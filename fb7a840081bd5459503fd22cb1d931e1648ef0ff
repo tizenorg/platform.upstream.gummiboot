@@ -1,0 +1,8 @@
+Change-Id: Ifb7a840081bd5459503fd22cb1d931e1648ef0ff
+Code-Review+2: Ryan Ware <ware@linux.intel.com>
+Verified+1: Ryan Ware <ware@linux.intel.com>
+Submitted-by: Ryan Ware <ware@linux.intel.com>
+Submitted-at: Mon, 08 Jul 2013 09:37:38 -0700
+Reviewed-on: https://review.tizen.org/gerrit/5185
+Project: platform/upstream/gummiboot
+Branch: refs/heads/tizen
