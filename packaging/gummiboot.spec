@@ -20,7 +20,7 @@ Gummiboot is a simple EFI bootloader.
 
 %build
 cp %{SOURCE1001} .
-%reconfigure
+%reconfigure --with-efi-ldsdir=/usr/lib
 make
 
 %install
