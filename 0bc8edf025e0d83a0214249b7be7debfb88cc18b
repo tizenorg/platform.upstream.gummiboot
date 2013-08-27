@@ -1,0 +1,11 @@
+Code-Review+2: Auke Kok <auke-jan.h.kok@intel.com>
+Code-Review+1: Patrick McCarty <patrick.mccarty@linux.intel.com>
+Code-Review+2: Anas Nashif <anas.nashif@intel.com>
+Code-Review+2: Mikko Ylinen <mikko.ylinen@intel.com>
+Verified+1: Mikko Ylinen <mikko.ylinen@intel.com>
+Code-Review+1: william douglas <william.douglas@intel.com>
+Submitted-by: Mikko Ylinen <mikko.ylinen@intel.com>
+Submitted-at: Tue, 27 Aug 2013 10:53:41 -0700
+Reviewed-on: https://review.tizen.org/gerrit/8821
+Project: platform/upstream/gummiboot
+Branch: refs/heads/tizen
