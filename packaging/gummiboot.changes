@@ -1,3 +1,9 @@
+* Tue Aug 27 2013 Mikko Ylinen <mikko.ylinen@intel.com> 670aa84
+- Fix RPM Group tag
+- Set EFI LDS dir to Tizen path
+- Add gbs.conf
+- resetting manifest requested domain to floor
+- Upstream version 36
 * Mon May 27 2013 Anas Nashif <anas.nashif@intel.com> submit/tizen/20130509.180339@e6b7e4d
 - make it exclusive to %ix86
 
