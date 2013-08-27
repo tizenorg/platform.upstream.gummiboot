@@ -4,7 +4,7 @@ Release:        1
 License:        LGPL-2.1
 Summary:        EFI Kernel loader
 Url:            http://cgit.freedesktop.org/gummiboot/
-Group:          System/Boot
+Group:          Base/Startup
 Source0:        http://cgit.freedesktop.org/%{name}/snapshot/%{name}-%{version}.tar.gz
 Source1001:     gummiboot.manifest
 BuildRequires:  gnu-efi
