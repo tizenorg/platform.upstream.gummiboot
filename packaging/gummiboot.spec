@@ -1,6 +1,6 @@
 Name:           gummiboot
 Version:        36
-Release:        1
+Release:        2
 License:        LGPL-2.1
 Summary:        EFI Kernel loader
 Url:            http://cgit.freedesktop.org/gummiboot/
