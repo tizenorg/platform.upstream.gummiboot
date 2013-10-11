@@ -53,6 +53,25 @@ gummiboot_CFLAGS = \
 gummiboot_LDADD = \
 	$(BLKID_LIBS)
 
+if ENABLE_GPO
+bin_PROGRAMS += ppm2bgrx
+ppm2bgrxdir = $(pkgdatadir)/
+
+ppm2bgrx_SOURCES = \
+	src/utils/ppm2bgrx.c
+
+ppm2bgrx_CPPFLAGS = \
+	$(AM_CPPFLAGS)
+
+ppm2bgrx_CFLAGS = \
+	$(AM_CFLAGS)
+
+ppm2bgrx_DATA = \
+	data/gummiboot.ppm
+
+EXTRA_DIST += $(ppm2bgrx_DATA)
+endif
+
 if ENABLE_MANPAGES
 %.8: %.xml
 	$(AM_V_GEN)$(XSLTPROC) -o $@ --nonet \
@@ -73,7 +92,13 @@ CLEANFILES += man/gummiboot.8
 # bypasses regular automake to provide absolute control on compiler and linker
 # flags.
 efi_loadername = gummiboot$(MACHINE_TYPE_NAME).efi
-efi_sources = src/efi/gummiboot.c
+efi_sources = \
+	src/efi/gummiboot.c
+
+if ENABLE_GPO
+efi_sources += \
+	src/efi/gpo.c
+endif
 
 efi_cppflags = \
 	$(EFI_CPPFLAGS) \

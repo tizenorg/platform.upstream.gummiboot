@@ -34,6 +34,8 @@
 #define EFI_SECURITY_VIOLATION      EFIERR(26)
 #endif
 
+#include "gpo.h"
+
 /* magic string to find in the binary image */
 static const char __attribute__((used)) magic[] = "#### LoaderInfo: gummiboot " VERSION " ####";
 
@@ -52,6 +54,11 @@ enum loader_type {
         LOADER_LINUX
 };
 
+enum console_mode {
+        CONSOLE_TEXT,
+        CONSOLE_GRAPHICS,
+};
+
 typedef struct {
         CHAR16 *file;
         CHAR16 *title_show;
@@ -62,6 +69,8 @@ typedef struct {
         enum loader_type type;
         CHAR16 *loader;
         CHAR16 *options;
+        GpoGfxMode *gfxmode;
+        CHAR16 *splash;
         CHAR16 key;
         EFI_STATUS (*call)(void);
         BOOLEAN no_autoselect;
@@ -80,6 +89,8 @@ typedef struct {
         CHAR16 *entry_oneshot;
         CHAR16 *options_edit;
         CHAR16 *entries_auto;
+        GpoGfxMode *gfxmode;
+        CHAR16 *splash;
 } Config;
 
 static CHAR16 *stra_to_str(CHAR8 *stra);
@@ -802,6 +813,10 @@ static VOID print_status(Config *config, CHAR16 *loaded_image_path) {
                         Print(L"loader                  '%s'\n", entry->loader);
                 if (entry->options)
                         Print(L"options                 '%s'\n", entry->options);
+                if (entry->gfxmode)
+                        Print(L"gfxmode                 %dx%d\n", entry->gfxmode->width, entry->gfxmode->height);
+                if (entry->splash)
+                        Print(L"splash                  '%s'\n", entry->splash);
                 Print(L"auto-select             %s\n", entry->no_autoselect ? L"no" : L"yes");
                 if (entry->call)
                         Print(L"internal call           yes\n");
@@ -813,7 +828,7 @@ static VOID print_status(Config *config, CHAR16 *loaded_image_path) {
         uefi_call_wrapper(ST->ConOut->ClearScreen, 1, ST->ConOut);
 }
 
-static EFI_STATUS console_text_mode(VOID) {
+static EFI_STATUS console_mode(enum console_mode request) {
         #define EFI_CONSOLE_CONTROL_PROTOCOL_GUID \
                 { 0xf42f7782, 0x12e, 0x4c12, { 0x99, 0x56, 0x49, 0xf9, 0x43, 0x4, 0xf7, 0x21 } };
 
@@ -850,12 +865,30 @@ static EFI_STATUS console_text_mode(VOID) {
 
         EFI_GUID ConsoleControlProtocolGuid = EFI_CONSOLE_CONTROL_PROTOCOL_GUID;
         EFI_CONSOLE_CONTROL_PROTOCOL *ConsoleControl = NULL;
+        EFI_CONSOLE_CONTROL_SCREEN_MODE new;
+        EFI_CONSOLE_CONTROL_SCREEN_MODE current;
+        BOOLEAN uga_exists;
+        BOOLEAN stdin_locked;
         EFI_STATUS err;
 
         err = LibLocateProtocol(&ConsoleControlProtocolGuid, (VOID **)&ConsoleControl);
         if (EFI_ERROR(err))
                 return err;
-        return uefi_call_wrapper(ConsoleControl->SetMode, 2, ConsoleControl, EfiConsoleControlScreenText);
+
+        err = uefi_call_wrapper(ConsoleControl->GetMode, 4, ConsoleControl, &current, &uga_exists, &stdin_locked);
+        (void)uga_exists;
+        (void)stdin_locked;
+        if (EFI_ERROR(err))
+                return err;
+
+        switch (request) {
+        case CONSOLE_GRAPHICS: new = EfiConsoleControlScreenGraphics; break;
+        case CONSOLE_TEXT: new = EfiConsoleControlScreenText; break;
+        }
+        if (new == current)
+                return EFI_SUCCESS;
+
+        return uefi_call_wrapper(ConsoleControl->SetMode, 2, ConsoleControl, new);
 }
 
 static BOOLEAN menu_run(Config *config, ConfigEntry **chosen_entry, CHAR16 *loaded_image_path) {
@@ -882,7 +915,7 @@ static BOOLEAN menu_run(Config *config, ConfigEntry **chosen_entry, CHAR16 *load
         BOOLEAN run = TRUE;
         BOOLEAN wait = FALSE;
 
-        console_text_mode();
+        console_mode(CONSOLE_TEXT);
         uefi_call_wrapper(ST->ConIn->Reset, 2, ST->ConIn, FALSE);
         uefi_call_wrapper(ST->ConOut->EnableCursor, 2, ST->ConOut, FALSE);
         uefi_call_wrapper(ST->ConOut->SetAttribute, 2, ST->ConOut, EFI_LIGHTGRAY|EFI_BACKGROUND_BLACK);
@@ -1433,6 +1466,65 @@ static CHAR8 *strchra(CHAR8 *s, CHAR8 c) {
         return NULL;
 }
 
+static INTN atoi(CHAR16  *str)
+{
+        INTN       i;
+        BOOLEAN    s = FALSE;
+        CHAR16      c;
+
+        while (*str && *str == ' ') {
+                str += 1;
+        }
+        if(*str == '-') {
+                s = TRUE;
+                str += 1;
+        }
+
+        i = 0;
+        while ((c = *(str++))) {
+                if (c >= '0' && c <= '9') {
+                    i = (i * 10) + (c - '0');
+                } else {
+                    break;
+                }
+        }
+        return s ? -i : i;
+}
+
+static GpoGfxMode *str_to_gfxmode(CHAR16 *str) {
+        GpoGfxMode *gfxmode;
+        UINTN i;
+
+        if (!str)
+                goto err;
+
+        gfxmode = AllocatePool(sizeof(GpoGfxMode));
+
+        while(*str == ' ')
+                ++str;
+
+        gfxmode->width = atoi(str);
+        if (!gfxmode->width)
+                goto err2;
+
+        do {
+                if (*str == 'x' || *str == 'X' || *str == '*' || *str == ' ') {
+                        ++str;
+                        break;
+                }
+        } while (*(str++));
+
+        gfxmode->height = atoi(str);
+        if (!gfxmode->height)
+                goto err2;
+        
+        return gfxmode;
+err2:
+        FreePool(gfxmode);
+err:
+        return NULL;
+}
+
 static CHAR8 *line_get_key_value(CHAR8 *content, UINTN *pos, CHAR8 **key_ret, CHAR8 **value_ret) {
         CHAR8 *line;
         UINTN linelen;
@@ -1508,6 +1600,18 @@ static VOID config_defaults_load_from_file(Config *config, CHAR8 *content) {
                 if (strcmpa((CHAR8 *)"default", key) == 0) {
                         config->entry_default_pattern = stra_to_str(value);
                         StrLwr(config->entry_default_pattern);
+                        continue;
+                }
+                if (strcmpa((CHAR8 *)"gfxmode", key) == 0) {
+                        CHAR16 *s;
+
+                        s = stra_to_str(value);
+                        config->gfxmode = str_to_gfxmode(s);
+                        FreePool(s);
+                        continue;
+                }
+                if (strcmpa((CHAR8 *)"splash", key) == 0) {
+                        config->splash = stra_to_path(value);
                         continue;
                 }
         }
@@ -1597,6 +1701,22 @@ static VOID config_entry_add_from_file(Config *config, EFI_HANDLE *device, CHAR1
                         FreePool(new);
                         continue;
                 }
+
+                if (strcmpa((CHAR8 *)"splash", key) == 0) {
+                        FreePool(entry->splash);
+                        entry->splash = stra_to_path(value);
+                        continue;
+                }
+
+                if (strcmpa((CHAR8 *)"gfxmode", key) == 0) {
+                        CHAR16 *s;
+                        
+                        s = stra_to_str(value);
+                        FreePool(entry->gfxmode);
+                        entry->gfxmode = str_to_gfxmode(s);
+                        FreePool(s);
+                        continue;
+                }
         }
 
         if (entry->type == LOADER_UNDEFINED) {
@@ -1672,7 +1792,7 @@ static VOID config_entry_add_from_file(Config *config, EFI_HANDLE *device, CHAR1
         config_add_entry(config, entry);
 }
 
-static UINTN file_read(EFI_FILE_HANDLE dir, CHAR16 *name, CHAR8 **content) {
+UINTN file_read(EFI_FILE_HANDLE dir, CHAR16 *name, CHAR8 **content) {
         EFI_FILE_HANDLE handle;
         EFI_FILE_INFO *info;
         CHAR8 *buf;
@@ -2264,7 +2384,7 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *sys_table) {
                 }
         } else
                 menu = TRUE;
-
+        
         for (;;) {
                 ConfigEntry *entry;
 
@@ -2280,6 +2400,32 @@ EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *sys_table) {
                                 entry->call();
                                 continue;
                         }
+                } else {
+                        if (config.gfxmode) {
+                                console_mode(CONSOLE_GRAPHICS);
+                                err = gpo_graphics_mode(config.gfxmode);
+                                if (!EFI_ERROR(err)) {
+                                        if (config.splash) {
+                                                err = gpo_draw_splash(root_dir, config.splash);
+                                                if (EFI_ERROR(err))
+                                                        Print(L"Error drawing splash '%s': %r\n", config.splash, err);
+                                        }
+                                } else
+                                        Print(L"Error setting graphics mode '%dx%d': %r\n", config.gfxmode->width, config.gfxmode->height, err);
+                        }
+                }
+
+                if (entry->gfxmode) {
+                        console_mode(CONSOLE_GRAPHICS);
+                        err = gpo_graphics_mode(entry->gfxmode);
+                        if (!EFI_ERROR(err)) {
+                                if (entry->splash) {
+                                        err = gpo_draw_splash(root_dir, entry->splash);
+                                        if (EFI_ERROR(err))
+                                                Print(L"Error drawing entry splash '%s': %r\n", entry->splash, err);
+                                }
+                        } else
+                                Print(L"Error setting entry graphics mode '%dx%d': %r\n", entry->gfxmode->width, entry->gfxmode->height, err);
                 }
 
                 /* export the selected boot entry to the system */

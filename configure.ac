@@ -124,6 +124,12 @@ AS_IF([test "x$enable_manpages" != xno], [
 AM_CONDITIONAL(ENABLE_MANPAGES, [test "x$have_manpages" = "xyes"])
 
 # ------------------------------------------------------------------------------
+AC_ARG_ENABLE(gpo, AS_HELP_STRING([--enable-gpo], [enable support for GPO mode setting and bootsplash]))
+AM_CONDITIONAL(ENABLE_GPO, [test "x$enable_gpo" = "xyes"])
+AH_TEMPLATE([ENABLE_GPO], [Define to enable support for GPO mode setting and bootsplash.])
+AS_IF([test "x$enable_gpo" = "xyes"], [AC_DEFINE([ENABLE_GPO], [1])])
+
+# ------------------------------------------------------------------------------
 AC_CONFIG_FILES([
         Makefile
 ])
@@ -135,6 +141,7 @@ AC_MSG_RESULT([
         prefix:                  ${prefix}
         arch:                    $ARCH
         EFI machine type:        $MACHINE_TYPE_NAME
+        GPO:                     ${enable_gpo}
 
         EFI libdir:              ${EFI_LIB_DIR}
         EFI ldsdir:              ${EFI_LDS_DIR}

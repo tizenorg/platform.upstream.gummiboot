@@ -20,7 +20,10 @@ Gummiboot is a simple EFI bootloader.
 
 %build
 cp %{SOURCE1001} .
-%reconfigure --with-efi-libdir=/usr/lib --with-efi-ldsdir=/usr/lib
+%reconfigure \
+	--with-efi-libdir=/usr/lib \
+	--with-efi-ldsdir=/usr/lib \
+	--enable-gpo
 make
 
 %install
@@ -32,6 +35,8 @@ rm -fr %{buildroot}
 %defattr(-,root,root)
 %manifest gummiboot.manifest
 %{_bindir}/gummiboot
+%{_bindir}/ppm2bgrx
+%{_datadir}/gummiboot/gummiboot.ppm
 %ifarch x86_64
 %{_prefix}/lib/gummiboot/gummibootx64.efi
 %else
