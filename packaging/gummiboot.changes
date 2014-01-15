@@ -1,3 +1,7 @@
+* Wed Jan 15 2014 Mikko Ylinen <mikko.ylinen@intel.com> 7621fb1
+- Rebase to upstream version 42 (splash image support)
+- Update version info and changelog
+
 * Wed Aug 28 2013 Mikko Ylinen <mikko.ylinen@intel.com> submit/tizen/20130827.141908@0bc8edf
 - Fix build for x86_64
 
