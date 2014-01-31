@@ -15,6 +15,15 @@ ExclusiveArch:  %ix86 x86_64
 %description
 Gummiboot is a simple EFI bootloader.
 
+%package splash
+Summary:	Gummiboot default splash image
+BuildArch: 	noarch
+Requires:	%{name} = %{version}
+
+%description splash
+This package contains the Gummiboot default splash image. It's the
+project logo and maintained in the upstream gummiboot Git tree.
+
 %prep
 %setup -q -n %{name}-%{version}
 
@@ -27,6 +36,9 @@ make
 rm -fr %{buildroot}
 %make_install
 
+mkdir -p %{buildroot}/%{_datadir}/%{name}
+cp test/splash.bmp %{buildroot}/%{_datadir}/%{name}
+
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root)
@@ -37,3 +49,6 @@ rm -fr %{buildroot}
 %else
 %{_prefix}/lib/gummiboot/gummibootia32.efi
 %endif
+
+%files splash
+%{_datadir}/%{name}/splash.bmp
