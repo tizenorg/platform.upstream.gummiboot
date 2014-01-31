@@ -1,5 +1,5 @@
 Name:           gummiboot
-Version:        42
+Version:        43
 Release:        1
 License:        LGPL-2.1
 Summary:        EFI Kernel loader
