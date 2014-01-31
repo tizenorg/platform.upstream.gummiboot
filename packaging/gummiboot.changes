@@ -1,3 +1,10 @@
+* Fri Jan 31 2014 Mikko Ylinen <mikko.ylinen@intel.com> 4817c1c
+- Rebase to upstream version 43 (splash fixes). See list below.
+- 'P' clear screen after splash
+- graphics: Do not require nonstandard console control protocol
+- graphics: splash - correct rounding in alpha blending
+- disable cursor when switching text/graphics mode
+
 * Fri Jan 17 2014 Mikko Ylinen <mikko.ylinen@intel.com> 7621fb1
 - update .changes for a new release
 - new upstream release (version 42)
