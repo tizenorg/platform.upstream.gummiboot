@@ -1,6 +1,6 @@
 Name:           gummiboot
-Version:        43
-Release:        1
+Version:        48
+Release:        0
 License:        LGPL-2.1
 Summary:        EFI Kernel loader
 Url:            http://cgit.freedesktop.org/gummiboot/
@@ -30,7 +30,7 @@ project logo and maintained in the upstream gummiboot Git tree.
 %build
 cp %{SOURCE1001} .
 %reconfigure --with-efi-libdir=/usr/lib --with-efi-ldsdir=/usr/lib
-make
+%__make
 
 %install
 rm -fr %{buildroot}
@@ -44,11 +44,8 @@ cp test/splash.bmp %{buildroot}/%{_datadir}/%{name}
 %defattr(-,root,root)
 %manifest gummiboot.manifest
 %{_bindir}/gummiboot
-%ifarch x86_64
-%{_prefix}/lib/gummiboot/gummibootx64.efi
-%else
-%{_prefix}/lib/gummiboot/gummibootia32.efi
-%endif
+%{_prefix}/lib/%{name}/gummiboot*.efi
+%{_prefix}/lib/%{name}/linux*.efi.stub
 
 %files splash
 %{_datadir}/%{name}/splash.bmp
