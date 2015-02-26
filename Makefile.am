@@ -95,6 +95,7 @@ efi_cflags = \
 	$(EFI_CFLAGS) \
 	-Wall \
 	-Wextra \
+	-std=gnu90 \
 	-nostdinc \
 	-ggdb -O0 \
 	-fpic \
